@@ -10,7 +10,7 @@ import tkinter as tk
 
 plotSize=4
 canvasSize=100
-windowSizeX=200
+windowSizeX=300
 windowSizeY=150
 def verifyNumbers(inputArray):
     _temp=[]
@@ -189,7 +189,6 @@ class myDrawnCanvas():
         self._chem=inputOrganization[inputEvent]['chem']
     
     def makeCompletePlot(self):
-        print('in super class!')
         _drawnCanvas,slope,yint= addRegressionUI(self._xInput,self._yInput,self._canvas,self._regression,self._chem)
         #_drawnCanvas = scatterPlotToUI(self._xInput,self._yInput,self._canvas)
         return _drawnCanvas
@@ -212,9 +211,9 @@ dataCol2 =[
 
 graphCol3 =[
     [sg.Text("Calibration")],
-    [sg.Button("Plot1"),sg.Button("Clear1"),plotButton1.myText,plotButton1.option1,plotButton1.option2],[sg.Canvas(key=inputOrganization['Plot1']['inCanvas'])],
-    [sg.Button("Plot2"),sg.Button("Clear2"),plotButton2.myText,plotButton2.option1,plotButton2.option2],[sg.Canvas(key=inputOrganization['Plot2']['inCanvas'])],
-    [sg.Button("Plot3"),sg.Button("Clear3"),plotButton3.myText,plotButton3.option1,plotButton3.option2],[sg.Canvas(key=inputOrganization['Plot3']['inCanvas'])]
+    [sg.Button("Plot1"),sg.Button("Clear1"),plotButton1.myText,plotButton1.option1,plotButton1.option2],[sg.Canvas(background_color="white", size=(canvasSize,canvasSize),key=inputOrganization['Plot1']['inCanvas'])],
+    [sg.Button("Plot2"),sg.Button("Clear2"),plotButton2.myText,plotButton2.option1,plotButton2.option2],[sg.Canvas(background_color="white", size=(canvasSize,canvasSize),key=inputOrganization['Plot2']['inCanvas'])],
+    [sg.Button("Plot3"),sg.Button("Clear3"),plotButton3.myText,plotButton3.option1,plotButton3.option2],[sg.Canvas(background_color="white", size=(canvasSize,canvasSize),key=inputOrganization['Plot3']['inCanvas'])]
 ]
 
 layout = [ 
@@ -222,38 +221,31 @@ layout = [
     [sg.Column(dataCol1),sg.VSeperator(),sg.Column(dataCol2),sg.VSeperator(),sg.Column(graphCol3)],
     [sg.Submit(), sg.Cancel()]
 ]
-window = sg.Window('Simple data entry window', layout,margins=(windowSizeX, windowSizeY)) 
 
-canvases=['drawnCanvas1','drawnCanvas2','drawnCanvas3']
+#Set the geometry
 
-def clearPlot(figName):
+window = sg.Window('Simple data entry window',layout,margins=(windowSizeX, windowSizeY)) 
+
+def deletePlot(figName):
    if figName in globals():
-       for i in globals().keys():
-            delete_figure_agg(globals()[i])
-            del(fig1)
+       delete_figure_agg(globals()[figName])
+       del(globals()[figName])
+
 while True:
     event, values = window.read()
     
     if event == sg.WIN_CLOSED or event=="Exit":
         break
-    if event=="Clear1" and ('fig1' in globals()):
-        delete_figure_agg(fig1)
-        #fig1.get_tk_widget().forget()
-        del(fig1)
+    if event=="Clear1" :
+        deletePlot(fig1)
     if event =="Plot1":
-        if 'fig1' in globals():
-            delete_figure_agg(fig1)
-            del(fig1)
+        deletePlot('fig1')
         fig1=myDrawnCanvas(event).makeCompletePlot()
     if event =="Plot2":
-        if 'fig2' in globals():
-            delete_figure_agg(fig2)
-            del(fig2)
+        deletePlot(fig2)
         fig2=myDrawnCanvas(event).makeCompletePlot()
     if event =="Plot3":
-        if 'fig3' in globals():
-            delete_figure_agg(fig3)
-            del(fig3)
+        deletePlot(fig3)
         fig3=myDrawnCanvas(event).makeCompletePlot()
 
 window.close() 
