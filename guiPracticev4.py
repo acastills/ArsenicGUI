@@ -5,9 +5,13 @@ import matplotlib.figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import seaborn as sns
 import pandas as pd
-#from sklearn.metrics import r2_score
 import scipy.stats
+import tkinter as tk
 
+plotSize=4
+canvasSize=100
+windowSizeX=200
+windowSizeY=150
 def verifyNumbers(inputArray):
     _temp=[]
     for i in inputArray:
@@ -71,25 +75,32 @@ def FigOnCanvas(canvas, figure):
         widget.pack(side='top', fill='both', expand=1.25)
     return figure_canvas_agg
 
-def scatterPlotToUI(windowX,windowY,chem="NA"):
+def scatterPlotToUI(windowX,windowY,canvas,chem="NA"):
+    print('made it here')
     _x=verifyNumbers(window[windowX].get().splitlines())
     _y=verifyNumbers(window[windowY].get().splitlines())
     
-    _newFig = matplotlib.figure.Figure(figsize=(4.5, 4.5), dpi=100)
+    print(_x)
+    _newFig = matplotlib.figure.Figure(figsize=(plotSize, plotSize), dpi=100)
     _sub1 = _newFig.add_subplot(111)
     try:
         scatterPlot(_x,_y,_sub1)
     except ValueError:
         print("x and y must be the same size")
-    return FigOnCanvas(window['-CANVAS-'].TKCanvas,_newFig)
+    return FigOnCanvas(canvas.TKCanvas,_newFig)
 
-def addRegressionUI(windowX,windowY,chem="NA",regression='linear'):
+ ## based on answer from geeksForGeeks 
+def isVariablePresent(variable):
+    for name, value in globals().items():
+        if value is variable:
+            return True
+
+def addRegressionUI(windowX,windowY,canvas,regression='linear',chem="NA"):
     inputX=verifyNumbers(window[windowX].get().splitlines())
     inputY=verifyNumbers(window[windowY].get().splitlines())
 
-    _updatedFig = matplotlib.figure.Figure(figsize=(4.5, 4.5), dpi=100)
+    _updatedFig = matplotlib.figure.Figure(figsize=(plotSize, plotSize), dpi=100)
     _sub1 = _updatedFig.add_subplot(111)
-    
     
     if regression=="log":
         prepX=logPrep(inputX)
@@ -116,68 +127,133 @@ def addRegressionUI(windowX,windowY,chem="NA",regression='linear'):
         _xlabel="x"
         _ylabel="y"
     ######
-    print('Plotting regression line')
     try:
         scatterPlot(_x,_y,_sub1)
-        slope, yint, temp = linearRegression(_x,_y,_sub1,chem='NA')
+        slope, yint, temp = linearRegression(_x,_y,_sub1,chem)
     except ValueError:
         print("x and y must be the same size")  
     _sub1.autoscale()
     _sub1.set_xlabel(_xlabel)
     _sub1.set_ylabel(_ylabel)
         
-    return FigOnCanvas(window['-CANVAS-'].TKCanvas,_updatedFig), slope, yint
+    return FigOnCanvas(canvas.TKCanvas,_updatedFig), slope, yint
+
+l1=sg.Text("Choose method:")
+r11=sg.Radio('PVA','chemMethod',key='pva',default=True)
+r12=sg.Radio('SDS','chemMethod',key='sds')
+
+class myIndicatorButton():
+    def __init__(self,inputText,myOpt1,myOpt2,myGroup):
+        self.myText=sg.Text(inputText)
+        self.option1=sg.Radio(myOpt1,myGroup,default=True)
+        self.option2=sg.Radio(myOpt2,myGroup,key=myGroup+'_'+myOpt2.lower())
+
+chemMethodButton=myIndicatorButton('Choose method:','PVA','SDS','chemMethod')
+plotButton1=myIndicatorButton('','Linear','Log','reg1')
+plotButton2=myIndicatorButton('','Linear','Log','reg2')
+plotButton3=myIndicatorButton('','Linear','Log','reg3')
+
+inputOrganization={
+    'Plot1':{'inWindowX':'Multiline1',
+    'inWindowY':'Multiline2',
+    'inCanvas':'-CANVAS1-',
+    'button':plotButton1,
+    'drawnCanvas':'drawnCanvas1',
+    'chem':'PO4'
+    },
+    'Plot2':{'inWindowX':'Multiline3',
+    'inWindowY':'Multiline4',
+    'inCanvas':'-CANVAS2-',
+    'button':plotButton2,
+    'drawnCanvas':'drawnCanvas2',
+    'chem':'As(V)'
+    } ,
+    'Plot3':{'inWindowX':'Multiline5',
+    'inWindowY':'Multiline6',
+    'inCanvas':'-CANVAS3-',
+    'button':plotButton3,
+    'drawnCanvas':'drawnCanvas3',
+    'chem':'As(III)'
+    }
+}
+class myDrawnCanvas():
+    def __init__(self,inputEvent):
+        global window
+        global values
+        global inputOrganization
+        _isLogRegression=values[inputOrganization[inputEvent]['button'].option2.key]
+        self._regression = 'log' if _isLogRegression else 'linear'
+        self._xInput=inputOrganization[inputEvent]['inWindowX']
+        self._yInput=inputOrganization[inputEvent]['inWindowY']
+        self._canvas=window[inputOrganization[inputEvent]['inCanvas']]
+        self._chem=inputOrganization[inputEvent]['chem']
+    
+    def makeCompletePlot(self):
+        print('in super class!')
+        _drawnCanvas,slope,yint= addRegressionUI(self._xInput,self._yInput,self._canvas,self._regression,self._chem)
+        #_drawnCanvas = scatterPlotToUI(self._xInput,self._yInput,self._canvas)
+        return _drawnCanvas
 
 dataCol1 =[
-    [   sg.Text("Column 1")],
-        [sg.Multiline(size=(5,20), key="Multiline1",expand_x=True, expand_y=True, justification='left', horizontal_scroll=True)
-        ]
+    [   sg.Text("Concentration (micromol)")],
+        [sg.Multiline(size=(5,5), key="Multiline1",expand_x=True, expand_y=True, justification='left', horizontal_scroll=True)],
+         [sg.Multiline(size=(5,5), key="Multiline3",expand_x=True, expand_y=True, justification='left', horizontal_scroll=True)],
+          [sg.Multiline(size=(5,5), key="Multiline5",expand_x=True, expand_y=True, justification='left', horizontal_scroll=True)]
+        
     ]
 
 dataCol2 =[
-    [   sg.Text("Column 2")],
-        [sg.Multiline(size=(5,20), key="Multiline2",expand_x=True, expand_y=True, justification='left',horizontal_scroll=True)
-        ]
+    [   sg.Text("Absorbance")],
+        [sg.Multiline(size=(5,5), key="Multiline2",expand_x=True, expand_y=True, justification='left',horizontal_scroll=True)],
+         [sg.Multiline(size=(5,5), key="Multiline4",expand_x=True, expand_y=True, justification='left',horizontal_scroll=True)],
+          [sg.Multiline(size=(5,5), key="Multiline6",expand_x=True, expand_y=True, justification='left',horizontal_scroll=True)],
+        
     ]
 
 graphCol3 =[
-    [
-        sg.Text("Column 3")
-        ],[sg.Button("Clear"),sg.Button("Rescale")],[sg.Canvas(key='-CANVAS-')],
-    [sg.Button("Linear Regression"),sg.Button("Log Regression")],
-    
+    [sg.Text("Calibration")],
+    [sg.Button("Plot1"),sg.Button("Clear1"),plotButton1.myText,plotButton1.option1,plotButton1.option2],[sg.Canvas(key=inputOrganization['Plot1']['inCanvas'])],
+    [sg.Button("Plot2"),sg.Button("Clear2"),plotButton2.myText,plotButton2.option1,plotButton2.option2],[sg.Canvas(key=inputOrganization['Plot2']['inCanvas'])],
+    [sg.Button("Plot3"),sg.Button("Clear3"),plotButton3.myText,plotButton3.option1,plotButton3.option2],[sg.Canvas(key=inputOrganization['Plot3']['inCanvas'])]
 ]
 
 layout = [ 
-    [sg.Text('Please enter data')],
+    [sg.Text('Please enter data')],[chemMethodButton.myText,chemMethodButton.option1,chemMethodButton.option2],
     [sg.Column(dataCol1),sg.VSeperator(),sg.Column(dataCol2),sg.VSeperator(),sg.Column(graphCol3)],
-    [sg.Button("Plot")],
     [sg.Submit(), sg.Cancel()]
 ]
-window = sg.Window('Simple data entry window', layout,margins=(100, 100)) 
+window = sg.Window('Simple data entry window', layout,margins=(windowSizeX, windowSizeY)) 
 
+canvases=['drawnCanvas1','drawnCanvas2','drawnCanvas3']
+
+def clearPlot(figName):
+   if figName in globals():
+       for i in globals().keys():
+            delete_figure_agg(globals()[i])
+            del(fig1)
 while True:
     event, values = window.read()
+    
     if event == sg.WIN_CLOSED or event=="Exit":
         break
-    if event=="Linear Regression" :
-        if 'drawnCanvas' in globals():
-            delete_figure_agg(drawnCanvas)
-            del(drawnCanvas)
-        drawnCanvas,slope,yint= addRegressionUI('Multiline1','Multiline2',chem="NA",regression='linear')
-    if event=="Log Regression":
-        if 'drawnCanvas' in globals():
-            delete_figure_agg(drawnCanvas)
-            del(drawnCanvas)
-        drawnCanvas,slope,yint= addRegressionUI('Multiline1','Multiline2',chem="NA",regression='log')
-    if event =="Rescale":
-        print("plot will be rescaled")
-    if event=="Clear" and ('drawnCanvas' in globals()):
-        delete_figure_agg(drawnCanvas)
-        del(drawnCanvas)
-    if event =="Plot":
-        if 'drawnCanvas' in globals():
-            delete_figure_agg(drawnCanvas)
-            del(drawnCanvas)
-        drawnCanvas = scatterPlotToUI('Multiline1','Multiline2')
+    if event=="Clear1" and ('fig1' in globals()):
+        delete_figure_agg(fig1)
+        #fig1.get_tk_widget().forget()
+        del(fig1)
+    if event =="Plot1":
+        if 'fig1' in globals():
+            delete_figure_agg(fig1)
+            del(fig1)
+        fig1=myDrawnCanvas(event).makeCompletePlot()
+    if event =="Plot2":
+        if 'fig2' in globals():
+            delete_figure_agg(fig2)
+            del(fig2)
+        fig2=myDrawnCanvas(event).makeCompletePlot()
+    if event =="Plot3":
+        if 'fig3' in globals():
+            delete_figure_agg(fig3)
+            del(fig3)
+        fig3=myDrawnCanvas(event).makeCompletePlot()
+
 window.close() 
